@@ -13,21 +13,22 @@ Français · 日本語 · ᠮᠣᠩᠭᠣᠯ（传统竖写蒙古文）· Españ
 - `generate_icons.py` — 生成 App 图标
 - `manifest.json` / `sw.js` — PWA 配置（可“添加到主屏幕”、离线可用）
 
-## 启用每日自动生成（需要 API key）
-1. 在 `.env`（本目录，或 `../personal-website/.env`）里填入真实的密钥：
-   `ANTHROPIC_API_KEY=sk-ant-...`  （目前是占位符 `your_api_key_here`）
-2. 运行一次试试：`python3 generate.py` —— 会刷新 `content.json`。
-3. 想每天自动跑，可加 cron（例如每天早上 6 点）：
-   `0 6 * * * /usr/bin/python3 /Users/yansong/language-study/generate.py`
+## 线上地址（已部署）
+**https://ryansongpku.github.io/language-study/**
 
-> 没有 key 也能用：当前 `content.json` 是一份示例内容（界面顶部标有「示例内容」）。
+GitHub Actions（`.github/workflows/daily.yml`）每天 **06:00 北京时间**自动在云端运行
+`generate.py` 生成当天内容并发布到 GitHub Pages —— 不依赖本地电脑。
+API key 存为仓库 secret `ANTHROPIC_API_KEY`（不在代码里）。
+也可在仓库 Actions 页面点 “Run workflow” 手动立即刷新。
 
 ## 在 iPhone 上用
-1. 让手机和电脑在同一 Wi-Fi，电脑上跑：
-   `cd /Users/yansong/language-study && python3 -m http.server 8123`
-2. iPhone Safari 打开 `http://<电脑IP>:8123/`
-3. 点分享 → “添加到主屏幕”，即可像原生 App 一样全屏使用。
-   （长期使用建议部署到任意静态托管，如 GitHub Pages / Vercel。）
+1. Safari 打开 https://ryansongpku.github.io/language-study/
+2. 点分享 → “添加到主屏幕”，即可像原生 App 一样全屏使用（图标是白色“三”字）。
+
+## 本地开发 / 手动生成
+1. 在 `.env`（本目录）填入 `ANTHROPIC_API_KEY=sk-ant-...`
+2. `python3 generate.py` —— 刷新本地 `content.json`
+3. `python3 -m http.server 8123` 后浏览器开 `http://localhost:8123/`
 
 ## 说明
 - 蒙古语用**传统竖写蒙古文**（回鹘式竖排，列从左到右），翻译下方附拉丁转写 + 西里尔对照，方便认读。
