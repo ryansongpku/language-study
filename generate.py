@@ -101,15 +101,16 @@ def generate_sentences(theme_a: str, theme_b: str) -> list:
 请生成 3 个**地道、自然**的中文句子，用于翻译练习：
 
 - 第 1 句：**简单**。短句，常用词汇，适合初学者（约 6–12 字）。
-- 第 2 句：**复杂**。包含从句、转折或时间/条件关系，词汇较丰富（约 18–30 字）。
-- 第 3 句：**复杂**。包含较抽象的表达、成语或地道口语，体现中文特色（约 18–30 字）。
+- 第 2 句：**中等**。日常句子，可含一个从句或连接词（如因为/虽然/的时候），稍长一点（约 12–20 字）。
+- 第 3 句：**中等**。另一个日常场景，难度与第 2 句相当（约 12–20 字）。
 
 要求：
 - 三句话主题各不相同，可参考主题：「{theme_a}」「{theme_b}」，也可自由发挥。
 - 句子要像真人说话/写作，避免教科书式生硬例句，避免老套（如"今天天气很好"）。
+- **不要难句**：不要成语堆砌、不要过于书面或抽象的表达，保持自然口语化。
 - 不要使用任何特定人名、不要涉及敏感内容。
 
-请按顺序返回 3 个句子：第 1 个 level 为 simple，第 2、3 个 level 为 complex。"""
+请按顺序返回 3 个句子：第 1 个 level 为 simple，第 2、3 个 level 为 medium。"""
     schema = {
         "type": "object",
         "properties": {
@@ -118,7 +119,7 @@ def generate_sentences(theme_a: str, theme_b: str) -> list:
                 "items": {
                     "type": "object",
                     "properties": {
-                        "level": {"type": "string", "enum": ["simple", "complex"]},
+                        "level": {"type": "string", "enum": ["simple", "medium"]},
                         "zh": {"type": "string"},
                     },
                     "required": ["level", "zh"],
@@ -133,10 +134,10 @@ def generate_sentences(theme_a: str, theme_b: str) -> list:
     if isinstance(sents, str):
         sents = json.loads(sents)
     norm = []
-    for s in sents:
+    for i, s in enumerate(sents):
         if isinstance(s, str):
             s = json.loads(s)
-        norm.append({"level": s.get("level", "complex"), "zh": s["zh"]})
+        norm.append({"level": s.get("level", "simple" if i == 0 else "medium"), "zh": s["zh"]})
     return norm
 
 

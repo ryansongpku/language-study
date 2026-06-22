@@ -86,11 +86,17 @@
     font-size:12px; font-weight:700; padding:4px 11px; border-radius:999px; letter-spacing:.02em;
   }
   .badge.simple{color:var(--simple); background:var(--simple-soft);}
-  .badge.complex{color:var(--complex); background:var(--complex-soft);}
+  .badge.complex,.badge.medium{color:var(--complex); background:var(--complex-soft);}
   .num{font-size:12px; color:var(--muted); font-weight:600; float:right; margin-top:5px;}
 
-  .zh{font-size:24px; line-height:1.5; font-weight:700; margin:14px 0 4px; letter-spacing:-.01em;}
-  .hint{font-size:13.5px; color:var(--muted); margin:0 0 14px; display:flex; align-items:center; gap:6px;}
+  .zh{font-size:26px; line-height:1.5; font-weight:700; margin:14px 0 4px; letter-spacing:-.01em;}
+  .hint{font-size:13.5px; color:var(--muted); margin:8px 0 0; display:flex; align-items:center; gap:6px;}
+
+  /* The prominent Chinese-sentence header at the top of each tab. */
+  .sentence-head{padding-bottom:18px;}
+  /* Per-language section title inside a card. */
+  .lang-title{font-size:17px; font-weight:800; letter-spacing:-.01em; margin:0 0 12px; display:flex; align-items:center; gap:8px;}
+  .lang-title .dot{width:8px; height:8px; border-radius:50%; background:var(--accent);}
 
   .step{margin-top:10px;}
   .reveal-btn{
@@ -144,15 +150,20 @@
   <main id="cards"></main>
 
   <footer>
-    一句简单 · 两句复杂 &nbsp;|&nbsp; 中文 → 思考 → 翻译 → 讲解<br>
+    一句简单 · 两句中等 &nbsp;|&nbsp; 中文 → 思考 → 翻译 → 讲解<br>
     每天由 Claude 自动生成
   </footer>
 </div>
 
 <script>
-const PRON_LABEL = "读音";
-let DATA = null, currentLang = null;
+let DATA = null, currentSentence = 0;
 const state = {};   // key `${si}:${lang}:${step}` -> bool
+const LEVELS = {
+  simple:  {text:"简单 · Simple", short:"简单", cls:"simple"},
+  medium:  {text:"中等 · Medium", short:"中等", cls:"medium"},
+  complex: {text:"中等 · Medium", short:"中等", cls:"medium"},  // legacy alias
+};
+function levelOf(s){ return LEVELS[s.level] || LEVELS.medium; }
 
 // Render explanation into paragraphs, bolding the leading ①生字：/②语法：/③… label.
 // Splits at each ①②③④⑤ marker, so it works whether the parts are newline-
@@ -171,44 +182,55 @@ function fmtExplain(text){
 }
 function escapeHtml(s){return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
 
-function renderLangs(){
+// One tab per sentence.
+function renderTabs(){
   const bar = document.getElementById("langbar");
   bar.innerHTML = "";
-  DATA.languages.forEach(l=>{
+  DATA.sentences.forEach((s, si)=>{
+    const lv = levelOf(s);
     const b = document.createElement("button");
-    b.className = "pill" + (l.code===currentLang?" active":"");
-    b.textContent = l.native;
-    b.onclick = ()=>{ currentLang = l.code; renderLangs(); renderCards(); };
+    b.className = "pill" + (si===currentSentence?" active":"");
+    b.textContent = `${si+1} · ${lv.short}`;
+    b.onclick = ()=>{ currentSentence = si; renderTabs(); renderSentence(); window.scrollTo({top:0,behavior:"smooth"}); };
     bar.appendChild(b);
   });
 }
 
-function renderCards(){
+// For the selected sentence: the Chinese sentence + a card per language.
+function renderSentence(){
   const root = document.getElementById("cards");
   root.innerHTML = "";
-  DATA.sentences.forEach((s, si)=>{
-    const t = s.translations[currentLang];
+  const si = currentSentence;
+  const s = DATA.sentences[si];
+  const lv = levelOf(s);
+
+  const head = document.createElement("div");
+  head.className = "card sentence-head";
+  head.innerHTML = `
+    <span class="badge ${lv.cls}">${lv.text}</span>
+    <span class="num">${si+1} / ${DATA.sentences.length}</span>
+    <div class="zh">${escapeHtml(s.zh)}</div>
+    <div class="hint">💭 先想想：分别用下面 ${DATA.languages.length} 种语言怎么说？</div>`;
+  root.appendChild(head);
+
+  DATA.languages.forEach((l, li)=>{
+    const code = l.code;
+    const t = s.translations[code];
     const card = document.createElement("div");
     card.className = "card";
-    card.style.animationDelay = (si*0.06)+"s";
+    card.style.animationDelay = ((li+1)*0.05)+"s";
 
-    const isSimple = s.level==="simple";
-    const lvText = isSimple ? "简单 · Simple" : "复杂 · Complex";
-
-    const kTrans = `${si}:${currentLang}:trans`;
-    const kExp   = `${si}:${currentLang}:exp`;
+    const kTrans = `${si}:${code}:trans`;
+    const kExp   = `${si}:${code}:exp`;
     const openTrans = !!state[kTrans], openExp = !!state[kExp];
 
     const pronHtml = (t && t.pron) ? `<span class="pron">${escapeHtml(t.pron)}</span>` : "";
-    const transText = t ? (currentLang==="mn"
+    const transText = t ? (code==="mn"
         ? `<span class="vert">${escapeHtml(t.text)}</span>`
         : escapeHtml(t.text)) : "—";
 
     card.innerHTML = `
-      <span class="badge ${isSimple?'simple':'complex'}">${lvText}</span>
-      <span class="num">${si+1} / ${DATA.sentences.length}</span>
-      <div class="zh">${escapeHtml(s.zh)}</div>
-      <div class="hint">💭 先想想：这句话用这门语言怎么说？</div>
+      <div class="lang-title"><span class="dot"></span>${escapeHtml(l.native)}</div>
 
       <div class="step">
         <button class="reveal-btn" data-k="${kTrans}">
@@ -255,9 +277,9 @@ async function init(){
   if(DATA.sample){
     document.getElementById("sampleTag").innerHTML = `<span class="sample-tag">示例内容</span>`;
   }
-  currentLang = DATA.languages[0].code;
-  renderLangs();
-  renderCards();
+  currentSentence = 0;
+  renderTabs();
+  renderSentence();
 }
 
 if("serviceWorker" in navigator){
