@@ -1,5 +1,7 @@
-// Service worker: app shell offline, content fetched fresh (network-first).
-const SHELL = "sanju-shell-v2";
+// Service worker.
+// - HTML + content.json: network-first (always fresh when online, cache as offline fallback).
+// - Static assets (icons, font, manifest): cache-first.
+const SHELL = "sanju-shell-v3";
 const SHELL_FILES = ["./", "./index.html", "./manifest.json",
   "./icon-180.png", "./icon-192.png", "./icon-512.png",
   "./NotoSansMongolian-Regular.ttf"];
@@ -15,11 +17,21 @@ self.addEventListener("activate", e=>{
 });
 self.addEventListener("fetch", e=>{
   const url = new URL(e.request.url);
-  // content.json: always try network first so daily content stays fresh.
-  if(url.pathname.endsWith("content.json")){
-    e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));
+  const isHTML = e.request.mode === "navigate"
+    || url.pathname.endsWith("/") || url.pathname.endsWith("index.html");
+  const isContent = url.pathname.endsWith("content.json");
+
+  if(isHTML || isContent){
+    // Network-first: fetch fresh, fall back to cache offline, and refresh the cache.
+    e.respondWith(
+      fetch(e.request).then(resp=>{
+        const copy = resp.clone();
+        caches.open(SHELL).then(c=>c.put(e.request, copy)).catch(()=>{});
+        return resp;
+      }).catch(()=>caches.match(e.request).then(r=>r||caches.match("./index.html")))
+    );
     return;
   }
-  // shell: cache first.
+  // Static assets: cache-first.
   e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));
 });
